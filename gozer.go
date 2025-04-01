@@ -48,25 +48,27 @@ type Site struct {
 
 type Page struct {
 	// Title of this page
-	Title         string
+	Title string
+
+	Tags []string
 
 	// Template this page uses for rendering. Defaults to "default.html".
-	Template      string
+	Template string
 
 	// Time this page was published (parsed from file name).
 	DatePublished time.Time
 
 	// Time this page was last modified (from filesystem).
-	DateModified  time.Time
+	DateModified time.Time
 
 	// The full URL to this page (incl. site URL)
-	Permalink     string
+	Permalink string
 
 	// URL path for this page, relative to site URL
-	UrlPath       string
+	UrlPath string
 
 	// Path to source file for this page, relative to content root
-	Filepath      string
+	Filepath string
 }
 
 // parseFilename parses the URL path and optional date component from the given file path
@@ -172,11 +174,11 @@ func (s *Site) buildPage(p *Page) error {
 	}
 
 	return tmpl.Execute(fh, map[string]any{
-		"Page":    p,
-		"Posts":   s.posts,
-		"Pages":   s.pages,
+		"Page":  p,
+		"Posts": s.posts,
+		"Pages": s.pages,
 		"Site": map[string]string{
-			"Url": s.SiteUrl,
+			"Url":   s.SiteUrl,
 			"Title": s.Title,
 		},
 
@@ -349,7 +351,7 @@ func (s *Site) createRSSFeed() error {
 		Channel: Channel{
 			Title:         s.Title,
 			Link:          s.SiteUrl,
-            Generator:     "Gozer",
+			Generator:     "Gozer",
 			LastBuildDate: time.Now().Format(time.RFC1123Z),
 			Items:         items,
 		},
@@ -398,15 +400,15 @@ func parseConfig(s *Site, file string) error {
 func main() {
 	configFile := "config.toml"
 	rootPath := ""
-    showHelp := false
+	showHelp := false
 
 	// parse flags
 	flag.StringVar(&configFile, "config", configFile, "")
 	flag.StringVar(&configFile, "c", configFile, "")
 	flag.StringVar(&rootPath, "root", rootPath, "")
 	flag.StringVar(&rootPath, "r", rootPath, "")
-    flag.BoolVar(&showHelp, "help", showHelp, "")
-    flag.BoolVar(&showHelp, "h", showHelp, "")
+	flag.BoolVar(&showHelp, "help", showHelp, "")
+	flag.BoolVar(&showHelp, "h", showHelp, "")
 	flag.Parse()
 
 	command := os.Args[len(os.Args)-1]
@@ -476,11 +478,25 @@ func createDirectoryStructure(rootPath string) error {
 	return nil
 }
 
+// contains is a helper function that checks if a string is present in a slice.
+// It is used in the templates.
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
+}
+
 func buildSite(rootPath string, configFile string) {
 	var err error
 	timeStart := time.Now()
 
-	templates, err = template.ParseGlob(filepath.Join(rootPath, "templates/*.html"))
+	templates, err = template.New("").Funcs(template.FuncMap{
+		"contains":       contains,
+		"stringContains": strings.Contains,
+	}).ParseGlob(filepath.Join(rootPath, "templates/*.html"))
 	if err != nil {
 		log.Fatal("Error reading templates/ directory: %s", err)
 	}
