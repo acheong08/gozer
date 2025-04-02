@@ -53,6 +53,8 @@ type Page struct {
 
 	Tags []string
 
+	Category string
+
 	// Template this page uses for rendering. Defaults to "default.html".
 	Template string
 
@@ -123,6 +125,7 @@ func parseFrontMatter(p *Page) error {
 	}
 
 	return toml.Unmarshal(buf[:pos], p)
+
 }
 
 func (p *Page) ParseContent() (string, error) {
@@ -182,6 +185,7 @@ func (s *Site) buildPage(p *Page) error {
 			"Url":   s.SiteUrl,
 			"Title": s.Title,
 		},
+		"Category": p.Category,
 
 		// Shorthand for accessing through .Page.Title / .Page.Content
 		"Title":   p.Title,
@@ -203,9 +207,9 @@ func (s *Site) AddPageFromFile(file string) error {
 
 	urlPath, datePublished := parseFilename(file, s.RootDir)
 
-	tags := []string{strings.Split(file, "/")[1]}
-	if strings.HasSuffix(tags[0], ".md") {
-		tags = []string{}
+	category := strings.Split(file, "/")[1]
+	if strings.HasSuffix(category, ".md") {
+		category = "page"
 	}
 
 	p := Page{
@@ -215,7 +219,7 @@ func (s *Site) AddPageFromFile(file string) error {
 		DatePublished: datePublished,
 		DateModified:  info.ModTime(),
 		Template:      "default.html",
-		Tags:          tags,
+		Category:      category,
 	}
 
 	if err := parseFrontMatter(&p); err != nil {
@@ -490,7 +494,7 @@ func filterPosts(posts []Page, tag string) []Page {
 	copy(postsCopy, posts)
 	n := 0
 	for _, val := range postsCopy {
-		if slices.Contains(val.Tags, tag) {
+		if val.Category == tag {
 			postsCopy[n] = val
 			n++
 		}
