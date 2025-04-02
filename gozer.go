@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -202,6 +203,11 @@ func (s *Site) AddPageFromFile(file string) error {
 
 	urlPath, datePublished := parseFilename(file, s.RootDir)
 
+	tags := []string{strings.Split(file, "/")[1]}
+	if strings.HasSuffix(tags[0], ".md") {
+		tags = []string{}
+	}
+
 	p := Page{
 		Filepath:      file,
 		UrlPath:       urlPath,
@@ -209,6 +215,7 @@ func (s *Site) AddPageFromFile(file string) error {
 		DatePublished: datePublished,
 		DateModified:  info.ModTime(),
 		Template:      "default.html",
+		Tags:          tags,
 	}
 
 	if err := parseFrontMatter(&p); err != nil {
@@ -478,15 +485,17 @@ func createDirectoryStructure(rootPath string) error {
 	return nil
 }
 
-// contains is a helper function that checks if a string is present in a slice.
-// It is used in the templates.
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
+func filterPosts(posts []Page, tag string) []Page {
+	postsCopy := make([]Page, len(posts))
+	copy(postsCopy, posts)
+	n := 0
+	for _, val := range postsCopy {
+		if slices.Contains(val.Tags, tag) {
+			postsCopy[n] = val
+			n++
 		}
 	}
-	return false
+	return postsCopy[:n]
 }
 
 func buildSite(rootPath string, configFile string) {
@@ -494,8 +503,9 @@ func buildSite(rootPath string, configFile string) {
 	timeStart := time.Now()
 
 	templates, err = template.New("").Funcs(template.FuncMap{
-		"contains":       contains,
+		"contains":       slices.Contains[[]string],
 		"stringContains": strings.Contains,
+		"filterPosts":    filterPosts,
 	}).ParseGlob(filepath.Join(rootPath, "templates/*.html"))
 	if err != nil {
 		log.Fatal("Error reading templates/ directory: %s", err)
