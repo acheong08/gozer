@@ -490,6 +490,9 @@ func createDirectoryStructure(rootPath string) error {
 }
 
 func filterPosts(posts []Page, tag string) []Page {
+	if tag == "page" {
+		return posts
+	}
 	postsCopy := make([]Page, len(posts))
 	copy(postsCopy, posts)
 	n := 0
